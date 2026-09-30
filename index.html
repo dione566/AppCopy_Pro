@@ -1285,8 +1285,11 @@
       sendRecoveryBtn.innerText = 'Enviando...';
 
       try {
-        // O endereço atual é usado para que o link retorne ao AppCopy+.
-        const redirectTo = window.location.origin + window.location.pathname;
+        // URL fixa de produção do AppCopy+.
+        // Não usamos window.location aqui porque, durante o desenvolvimento,
+        // o app pode estar em localhost:3000 e o link do e-mail seria inválido
+        // quando aberto no celular.
+        const redirectTo = 'https://dione566.github.io/AppCopy_Pro/';
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
 
         if (error) {
