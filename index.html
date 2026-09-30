@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AppCopy+ Pro</title>
+  <!-- FontAwesome & Fonte Inter -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --card-hover: #334155;
+      --accent: #06b6d4;
+      --accent-hover: #0891b2;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --danger: #ef4444;
+      --star-color: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Top Navigation Bar */
+    .app-header {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+    }
+
+    .header-title i {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--card-hover);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Search Container */
+    .search-container {
+      display: none;
+      background-color: var(--card-bg);
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-container.active {
+      display: block;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input-wrapper i {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+    }
+
+    .search-input-wrapper input {
+      width: 100%;
+      padding: 10px 14px 10px 40px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-main);
+      outline: none;
+      font-size: 14px;
+    }
+
+    .search-input-wrapper input:focus {
+      border-color: var(--accent);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background-color: var(--card-bg);
+      padding: 6px;
+      margin: 16px 20px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      background: none;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-button.active {
+      background-color: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    /* Breadcrumb / Navigation bar inside Folder view */
+    .folder-nav-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .folder-nav-header button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .folder-nav-header button:hover {
+      background: var(--card-hover);
+      color: var(--accent);
+    }
+
+    /* Content & Notes List */
+    .content-area {
+      flex: 1;
+      padding: 12px 20px 90px;
+    }
+
+    .note-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .note-item {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .note-item:hover {
+      border-color: var(--card-hover);
+      transform: translateY(-1px);
+    }
+
+    .note-item.folder-card {
+      cursor: pointer;
+    }
+
+    .note-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .copy-icon-btn {
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--accent);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .note-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Anotação/Título sobre o texto */
+    .note-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .note-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .note-folder-tag {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .note-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 15px;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .action-btn.star.active {
+      color: var(--star-color);
+    }
+
+    .action-btn.edit:hover {
+      color: var(--accent);
+      background: rgba(6, 182, 212, 0.1);
+    }
+
+    .action-btn.delete:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .empty-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* FAB (Floating Action Button) */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      font-size: 20px;
+      box-shadow: 0 8px 20px rgba(6, 182, 212, 0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .fab:hover {
+      background-color: var(--accent-hover);
+      transform: scale(1.05);
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-body label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .modal-body input, .modal-body select {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 14px;
+      margin-bottom: 14px;
+      outline: none;
+    }
+
+    .modal-body input:focus, .modal-body select:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg-color);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #334155;
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      z-index: 300;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* Autenticação Supabase */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.96);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .auth-overlay.hidden { display: none; }
+
+    .auth-card {
+      width: min(420px, 100%);
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+
+    .auth-card h2 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .auth-card p {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .auth-card label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 12px 0 6px;
+    }
+
+    .auth-card input {
+      width: 100%;
+      padding: 12px 13px;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 9px;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .auth-card input:focus { border-color: var(--accent); }
+
+    .auth-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .auth-actions .btn { flex: 1; }
+
+    .auth-error {
+      color: #fca5a5;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 12px;
+      min-height: 18px;
+    }
+
+    .auth-link {
+      display: block;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font-size: 13px;
+      margin-top: 12px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .auth-panel {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(148,163,184,.18);
+    }
+
+    .auth-panel h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .auth-panel p {
+      margin-bottom: 14px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .hidden { display: none !important; }
+
+    .sync-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .sync-status.online { color: #86efac; }
+    .sync-status.error { color: #fca5a5; }
+
+    .loading-msg {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 30px 10px;
+      font-size: 13px;
+    }
+
+    .login-form.recovery-active > label,
+    .login-form.recovery-active > input,
+    .login-form.recovery-active > .auth-actions,
+    .login-form.recovery-active > .auth-link,
+    .login-form.recovery-active > .auth-error { display:none; }
+
+    @media (max-width: 520px) {
+      .app-header { padding: 12px 14px; }
+      .header-actions { gap: 6px; }
+      .sync-status span { display: none; }
+      .sync-status { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login do Supabase -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card">
+      <h2><i class="fas fa-lock" style="color:var(--accent)"></i> AppCopy+ Pro</h2>
+      <p>Entre com sua conta para carregar e sincronizar suas anotações no Supabase.</p>
+      <form id="login-form" class="login-form">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" autocomplete="email" required placeholder="seu@email.com">
+        <label for="login-password">Senha</label>
+        <input type="password" id="login-password" autocomplete="current-password" required placeholder="Sua senha">
+        <div class="auth-actions">
+          <button class="btn btn-primary" type="submit" id="login-btn">Entrar</button>
+          <button class="btn btn-secondary" type="button" id="signup-btn">Criar conta</button>
+        </div>
+        <button class="auth-link" type="button" id="forgot-password-btn">Esqueci minha senha</button>
+        <div class="auth-error" id="auth-error"></div>
+
+      </form>
+        <div id="recovery-panel" class="auth-panel hidden">
+          <h3><i class="fas fa-key"></i> Recuperar senha</h3>
+          <p>Digite seu e-mail. Enviaremos um link para você criar uma nova senha.</p>
+          <label for="recovery-email">E-mail</label>
+          <input type="email" id="recovery-email" autocomplete="email" placeholder="seu@email.com">
+          <div class="auth-actions">
+            <button class="btn btn-primary" type="button" id="send-recovery-btn">Enviar link</button>
+            <button class="btn btn-secondary" type="button" id="cancel-recovery-btn">Voltar</button>
+          </div>
+          <div class="auth-error" id="recovery-error"></div>
+        </div>
+
+        <div id="new-password-panel" class="auth-panel hidden">
+          <h3><i class="fas fa-lock"></i> Nova senha</h3>
+          <p>Digite a nova senha para sua conta.</p>
+          <label for="new-password">Nova senha</label>
+          <input type="password" id="new-password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres">
+          <label for="new-password-confirm">Confirmar nova senha</label>
+          <input type="password" id="new-password-confirm" autocomplete="new-password" placeholder="Repita a nova senha">
+          <div class="auth-actions">
+            <button class="btn btn-primary" type="button" id="update-password-btn">Salvar nova senha</button>
+          </div>
+          <div class="auth-error" id="new-password-error"></div>
+        </div>
+
+    </div>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="app-header">
+    <div class="header-title">
+      <i class="fas fa-layer-group"></i>
+      <span>AppCopy+</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" id="search-toggle" title="Pesquisar">
+        <i class="fas fa-search"></i>
+      </button>
+      <span id="sync-status" class="sync-status" title="Status da sincronização">
+        <i class="fas fa-cloud"></i> <span>Conectando...</span>
+      </span>
+      <button class="btn-icon" id="logout-btn" title="Sair">
+        <i class="fas fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Campo de Busca -->
+  <div class="search-container" id="search-container">
+    <div class="search-input-wrapper">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search-input" placeholder="Buscar anotação, texto ou pasta...">
+    </div>
+  </div>
+
+  <!-- Navegação por Abas -->
+  <nav class="tabs">
+    <button class="tab-button active" onclick="switchTab('NOTE')">NOTE</button>
+    <button class="tab-button" onclick="switchTab('FOLDER')">FOLDER</button>
+    <button class="tab-button" onclick="switchTab('FAVORITE')">FAVORITE</button>
+  </nav>
+
+  <!-- Lista de Itens -->
+  <main class="content-area">
+    <div id="folder-nav-container"></div>
+    <ul class="note-list" id="note-list"></ul>
+  </main>
+
+  <!-- Botão para Adicionar -->
+  <button class="fab" id="open-modal-btn" title="Adicionar Novo Item">
+    <i class="fas fa-plus"></i>
+  </button>
+
+  <!-- Modal para Criar/Editar Item -->
+  <div class="modal-overlay" id="add-modal">
+    <div class="modal">
+      <div class="modal-header" id="modal-title">Novo Registro</div>
+      <div class="modal-body">
+        <label for="new-note-title">Anotação / Referência (Em cima)</label>
+        <input type="text" id="new-note-title" placeholder="Ex: Chave PIX, IP do Servidor, Senha...">
+
+        <label for="new-note-text">Texto / Conteúdo (Para Copiar)</label>
+        <input type="text" id="new-note-text" placeholder="Digite o texto a ser copiado...">
+        
+        <label for="new-note-folder">Pasta (Mover para)</label>
+        <select id="new-note-folder">
+          <option value="Geral">Geral</option>
+          <option value="Links">Links</option>
+          <option value="Documentos">Documentos</option>
+          <option value="Códigos">Códigos</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" id="modal-save-btn" onclick="handleSaveNote()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notificação Toast -->
+  <div class="toast" id="toast">Copiado para a área de transferência!</div>
+
+  <!-- DADOS GRAVADOS NO PRÓPRIO ARQUIVO HTML -->
+  <script id="notes-data" type="application/json">
+[
+  { "id": 1, "title": "Tarefa Pendente", "text": "Implementar no HTML", "favorite": false, "folder": "Geral" },
+  { "id": 2, "title": "Acesso Remoto", "text": "RostDesk S20 FE", "favorite": true, "folder": "Geral" },
+  { "id": 3, "title": "Site Oficial", "text": "https://anycopy.io/", "favorite": false, "folder": "Links" },
+  { "id": 4, "title": "Pagamento Repasse", "text": "Pix Stoque", "favorite": false, "folder": "Geral" },
+  { "id": 5, "title": "CNPJ da Empresa", "text": "33896593000175", "favorite": false, "folder": "Documentos" },
+  { "id": 6, "title": "Código de Ativação", "text": "RG93bmxvYWWRz", "favorite": true, "folder": "Códigos" }
+]
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Supabase do projeto AppCopy+ — tabela public.appcopy_notas
+    const SUPABASE_URL = 'https://wwbiuvsbapayqhoeqywu.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_wai0j-vNwYZk4RnuHSNofw_g6uV0jgM';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    // Isolamento por usuário: cada operação usa o UUID da conta autenticada.
+    // A proteção definitiva também é feita pelo RLS do Supabase.
+
+    const dataScript = document.getElementById('notes-data');
+    let notes = JSON.parse(dataScript.textContent);
+
+    let currentTab = 'NOTE';
+    let searchQuery = '';
+    let selectedFolder = null;
+    let editingNoteId = null;
+    let currentUserId = null;
+
+    const noteListEl = document.getElementById('note-list');
+    const folderNavEl = document.getElementById('folder-nav-container');
+    const searchContainer = document.getElementById('search-container');
+    const searchInput = document.getElementById('search-input');
+    const searchToggle = document.getElementById('search-toggle');
+    const syncStatus = document.getElementById('sync-status');
+    const logoutBtn = document.getElementById('logout-btn');
+    const authOverlay = document.getElementById('auth-overlay');
+    const loginForm = document.getElementById('login-form');
+    const loginEmail = document.getElementById('login-email');
+    const loginPassword = document.getElementById('login-password');
+    const loginBtn = document.getElementById('login-btn');
+    const signupBtn = document.getElementById('signup-btn');
+    const authError = document.getElementById('auth-error');
+    const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+    const recoveryPanel = document.getElementById('recovery-panel');
+    const recoveryEmail = document.getElementById('recovery-email');
+    const sendRecoveryBtn = document.getElementById('send-recovery-btn');
+    const cancelRecoveryBtn = document.getElementById('cancel-recovery-btn');
+    const recoveryError = document.getElementById('recovery-error');
+    const newPasswordPanel = document.getElementById('new-password-panel');
+    const newPassword = document.getElementById('new-password');
+    const newPasswordConfirm = document.getElementById('new-password-confirm');
+    const updatePasswordBtn = document.getElementById('update-password-btn');
+    const newPasswordError = document.getElementById('new-password-error');
+    const addModal = document.getElementById('add-modal');
+    const toast = document.getElementById('toast');
+
+    // Renderizar Interface
+    function render() {
+      noteListEl.innerHTML = '';
+      folderNavEl.innerHTML = '';
+
+      // Modo FOLDER
+      if (currentTab === 'FOLDER') {
+        if (!selectedFolder) {
+          const folders = [...new Set(notes.map(n => n.folder || 'Geral'))];
+          folders.forEach(folder => {
+            const count = notes.filter(n => n.folder === folder).length;
+            const li = document.createElement('li');
+            li.className = 'note-item folder-card';
+            li.onclick = () => openFolder(folder);
+            li.innerHTML = `
+              <div class="note-left">
+                <div class="copy-icon-btn"><i class="fas fa-folder"></i></div>
+                <div class="note-info">
+                  <span class="note-text">${escapeHtml(folder)}</span>
+                  <span class="note-folder-tag">${count} item(ns)</span>
+                </div>
+              </div>
+              <i class="fas fa-chevron-right action-btn"></i>
+            `;
+            noteListEl.appendChild(li);
+          });
+          return;
+        } else {
+          folderNavEl.innerHTML = `
+            <div class="folder-nav-header">
+              <button onclick="exitFolder()"><i class="fas fa-arrow-left"></i> Voltar</button>
+              <span>Pasta: <strong style="color:var(--text-main)">${escapeHtml(selectedFolder)}</strong></span>
+            </div>
+          `;
+        }
+      }
+
+      // Filtragem das notas por busca, aba e pasta
+      let filteredNotes = notes.filter(note => {
+        const matchesSearch = (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                              note.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              (note.folder && note.folder.toLowerCase().includes(searchQuery.toLowerCase()));
+        if (!matchesSearch) return false;
+
+        if (currentTab === 'FAVORITE') return note.favorite;
+        if (currentTab === 'FOLDER' && selectedFolder) return note.folder === selectedFolder;
+
+        return true;
+      });
+
+      if (filteredNotes.length === 0) {
+        noteListEl.innerHTML = '<div class="empty-msg">Nenhum registro encontrado.</div>';
+        return;
+      }
+
+      // Renderizar itens
+      filteredNotes.forEach(note => {
+        const li = document.createElement('li');
+        li.className = 'note-item';
+        
+        const titleMarkup = note.title 
+          ? `<span class="note-title">${escapeHtml(note.title)}</span>` 
+          : '';
+
+        li.innerHTML = `
+          <div class="note-left" onclick="copyToClipboard('${escapeQuotes(note.text)}')">
+            <div class="copy-icon-btn"><i class="far fa-copy"></i></div>
+            <div class="note-info">
+              ${titleMarkup}
+              <span class="note-text">${escapeHtml(note.text)}</span>
+              <span class="note-folder-tag">${escapeHtml(note.folder || 'Geral')}</span>
+            </div>
+          </div>
+          <div class="note-actions">
+            <button class="action-btn star ${note.favorite ? 'active' : ''}" 
+                    onclick="toggleFavorite(${note.id})" title="Favoritar">
+              <i class="fas fa-star"></i>
+            </button>
+            <button class="action-btn edit" 
+                    onclick="openEditModal(${note.id})" title="Editar / Mover">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button class="action-btn delete" 
+                    onclick="deleteNote(${note.id})" title="Excluir">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        `;
+        noteListEl.appendChild(li);
+      });
+    }
+
+    // Navegar pelas Pastas
+    function openFolder(folderName) {
+      selectedFolder = folderName;
+      render();
+    }
+
+    function exitFolder() {
+      selectedFolder = null;
+      render();
+    }
+
+    // Alternar Abas
+    function switchTab(tab) {
+      currentTab = tab;
+      selectedFolder = null;
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText === tab);
+      });
+      render();
+    }
+
+    // Favoritar
+    async function toggleFavorite(id) {
+      if (!currentUserId) return;
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+
+      const novoValor = !note.favorite;
+      const { error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .update({ favorite: novoValor, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', currentUserId);
+
+      if (error) {
+        showToast('Erro ao salvar favorito: ' + error.message);
+        setSyncStatus('error', 'Erro');
+        return;
+      }
+
+      note.favorite = novoValor;
+      render();
+      setSyncStatus('online', 'Sincronizado');
+    }
+
+    // Excluir Nota
+    async function deleteNote(id) {
+      if (!currentUserId) return;
+      if (!confirm("Deseja realmente excluir este item?")) return;
+
+      const { error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUserId);
+
+      if (error) {
+        showToast('Erro ao excluir: ' + error.message);
+        setSyncStatus('error', 'Erro');
+        return;
+      }
+
+      notes = notes.filter(n => n.id !== id);
+      render();
+      showToast("Item excluído!");
+      setSyncStatus('online', 'Sincronizado');
+    }
+
+    // Copiar Texto
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast("Copiado para a área de transferência!");
+      });
+    }
+
+    // Toast Notification
+    function showToast(msg) {
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // Abrir Modal para Criar
+    document.getElementById('open-modal-btn').addEventListener('click', () => {
+      editingNoteId = null;
+      document.getElementById('modal-title').innerText = "Novo Registro";
+      document.getElementById('new-note-title').value = '';
+      document.getElementById('new-note-text').value = '';
+      if (selectedFolder) {
+        document.getElementById('new-note-folder').value = selectedFolder;
+      }
+      addModal.classList.add('active');
+      document.getElementById('new-note-title').focus();
+    });
+
+    // Abrir Modal para Editar / Mover
+    function openEditModal(id) {
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+
+      editingNoteId = id;
+      document.getElementById('modal-title').innerText = "Editar / Mover Registro";
+      document.getElementById('new-note-title').value = note.title || '';
+      document.getElementById('new-note-text').value = note.text;
+      document.getElementById('new-note-folder').value = note.folder || 'Geral';
+      
+      addModal.classList.add('active');
+      document.getElementById('new-note-title').focus();
+    }
+
+    function closeModal() {
+      addModal.classList.remove('active');
+    }
+
+    // Salvar (Criar ou Editar) Nota
+    async function handleSaveNote() {
+      if (!currentUserId) {
+        showToast('Entre na sua conta antes de salvar.');
+        return;
+      }
+      const titleInput = document.getElementById('new-note-title');
+      const textInput = document.getElementById('new-note-text');
+      const folderInput = document.getElementById('new-note-folder');
+
+      const textVal = textInput.value.trim();
+      const titleVal = titleInput.value.trim();
+      const folderVal = folderInput.value || 'Geral';
+
+      if (!textVal) {
+        alert("O campo de texto copiável é obrigatório!");
+        return;
+      }
+
+      const saveButton = document.getElementById('modal-save-btn');
+      saveButton.disabled = true;
+      saveButton.innerText = 'Salvando...';
+      setSyncStatus('', 'Salvando...');
+
+      try {
+        if (editingNoteId !== null) {
+          const { data, error } = await supabaseClient
+            .schema('public').from('appcopy_notas')
+            .update({
+              title: titleVal,
+              text: textVal,
+              folder: folderVal,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', editingNoteId)
+            .eq('user_id', currentUserId)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          notes = notes.map(n => n.id === editingNoteId ? normalizeNote(data) : n);
+          showToast("Registro atualizado!");
+        } else {
+          const newNote = {
+            id: Date.now(),
+            user_id: currentUserId,
+            title: titleVal,
+            text: textVal,
+            favorite: currentTab === 'FAVORITE',
+            folder: folderVal
+          };
+
+          const { data, error } = await supabaseClient
+            .schema('public').from('appcopy_notas')
+            .insert(newNote)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          notes.unshift(normalizeNote(data));
+          showToast("Novo item adicionado!");
+        }
+
+        closeModal();
+        render();
+        setSyncStatus('online', 'Sincronizado');
+      } catch (error) {
+        console.error(error);
+        showToast('Erro ao salvar: ' + error.message);
+        setSyncStatus('error', 'Erro');
+      } finally {
+        saveButton.disabled = false;
+        saveButton.innerText = 'Salvar';
+      }
+    }
+
+    // Toggle da Busca
+    searchToggle.addEventListener('click', () => {
+      searchContainer.classList.toggle('active');
+      if (searchContainer.classList.contains('active')) {
+        searchInput.focus();
+      } else {
+        searchQuery = '';
+        searchInput.value = '';
+        render();
+      }
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      render();
+    });
+
+    // ------------------------------------------------------------
+    // Supabase: autenticação e sincronização
+    // ------------------------------------------------------------
+    function setSyncStatus(type, text) {
+      syncStatus.className = 'sync-status' + (type ? ' ' + type : '');
+      syncStatus.innerHTML = '<i class="fas fa-cloud"></i> <span>' + escapeHtml(text) + '</span>';
+    }
+
+    function normalizeNote(note) {
+      return {
+        id: Number(note.id),
+        title: note.title || '',
+        text: note.text || '',
+        favorite: Boolean(note.favorite),
+        folder: note.folder || 'Geral',
+        created_at: note.created_at,
+        updated_at: note.updated_at
+      };
+    }
+
+    async function loadNotesFromSupabase() {
+      if (!currentUserId) {
+        setSyncStatus('error', 'Usuário não autenticado');
+        return;
+      }
+      setSyncStatus('', 'Carregando...');
+      noteListEl.innerHTML = '<div class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Carregando suas anotações...</div>';
+
+      const { data, error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .select('*')
+        .eq('user_id', currentUserId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro Supabase:', error);
+        setSyncStatus('error', 'Erro');
+        noteListEl.innerHTML = '<div class="empty-msg">Não foi possível carregar as anotações.<br><small>' + escapeHtml(error.message) + '</small></div>';
+        showToast('Erro ao carregar o banco online.');
+        return;
+      }
+
+      notes = (data || []).map(normalizeNote);
+
+      // Migração inicial: se a conta ainda não possui notas, preserva os exemplos
+      // que estavam no HTML, mas grava-os no Supabase apenas uma vez.
+      if (notes.length === 0) {
+        const exemplos = JSON.parse(dataScript.textContent).map((n, i) => ({
+          id: Date.now() + i,
+          user_id: currentUserId,
+          title: n.title || '',
+          text: n.text || '',
+          favorite: Boolean(n.favorite),
+          folder: n.folder || 'Geral'
+        }));
+
+        const { data: seeded, error: seedError } = await supabaseClient
+          .schema('public').from('appcopy_notas')
+          .insert(exemplos)
+          .select();
+
+        if (seedError) {
+          console.error('Erro na migração inicial:', seedError);
+          setSyncStatus('error', 'Erro');
+          noteListEl.innerHTML = '<div class="empty-msg">Banco conectado, mas não foi possível gravar os dados iniciais.<br><small>' + escapeHtml(seedError.message) + '</small></div>';
+          return;
+        }
+
+        notes = (seeded || exemplos).map(normalizeNote);
+        showToast('Dados iniciais enviados ao Supabase!');
+      }
+
+      setSyncStatus('online', 'Sincronizado');
+      render();
+    }
+
+    async function startApp() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+
+      if (session && session.user) {
+        currentUserId = session.user.id;
+        authOverlay.classList.add('hidden');
+        logoutBtn.style.display = 'flex';
+        await loadNotesFromSupabase();
+      } else {
+        currentUserId = null;
+        notes = [];
+        authOverlay.classList.remove('hidden');
+        logoutBtn.style.display = 'none';
+        setSyncStatus('', 'Não conectado');
+        render();
+      }
+    }
+
+    function showLoginMode() {
+      loginForm.classList.remove('recovery-active');
+      recoveryPanel.classList.add('hidden');
+      newPasswordPanel.classList.add('hidden');
+      forgotPasswordBtn.classList.remove('hidden');
+      loginForm.classList.remove('hidden');
+      authError.textContent = '';
+      recoveryError.textContent = '';
+      newPasswordError.textContent = '';
+    }
+
+    function showRecoveryMode() {
+      loginForm.classList.remove('hidden');
+      loginForm.classList.add('recovery-active');
+      recoveryPanel.classList.remove('hidden');
+      newPasswordPanel.classList.add('hidden');
+      forgotPasswordBtn.classList.add('hidden');
+      recoveryEmail.value = loginEmail.value.trim();
+      recoveryError.textContent = '';
+      setTimeout(() => recoveryEmail.focus(), 50);
+    }
+
+    function showNewPasswordMode() {
+      loginForm.classList.remove('recovery-active');
+      loginForm.classList.add('hidden');
+      recoveryPanel.classList.add('hidden');
+      newPasswordPanel.classList.remove('hidden');
+      forgotPasswordBtn.classList.add('hidden');
+      newPasswordError.textContent = '';
+      authOverlay.classList.remove('hidden');
+    }
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      authError.textContent = '';
+      loginBtn.disabled = true;
+      loginBtn.innerText = 'Entrando...';
+
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email: loginEmail.value.trim(),
+        password: loginPassword.value
+      });
+
+      if (error) {
+        authError.textContent = error.message;
+        loginBtn.disabled = false;
+        loginBtn.innerText = 'Entrar';
+        return;
+      }
+
+      loginForm.reset();
+      loginBtn.disabled = false;
+      loginBtn.innerText = 'Entrar';
+      await startApp();
+    });
+
+    forgotPasswordBtn.addEventListener('click', () => {
+      showRecoveryMode();
+    });
+
+    cancelRecoveryBtn.addEventListener('click', () => {
+      showLoginMode();
+    });
+
+    // Evita cliques repetidos e trata o limite de envio de e-mails do Supabase.
+    let recoveryCooldownTimer = null;
+    const RECOVERY_COOLDOWN_SECONDS = 60;
+
+    function startRecoveryCooldown(seconds = RECOVERY_COOLDOWN_SECONDS) {
+      clearInterval(recoveryCooldownTimer);
+      let remaining = Math.max(1, Number(seconds) || RECOVERY_COOLDOWN_SECONDS);
+      sendRecoveryBtn.disabled = true;
+      sendRecoveryBtn.innerText = `Aguarde ${remaining}s`;
+
+      recoveryCooldownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(recoveryCooldownTimer);
+          recoveryCooldownTimer = null;
+          sendRecoveryBtn.disabled = false;
+          sendRecoveryBtn.innerText = 'Enviar link';
+        } else {
+          sendRecoveryBtn.innerText = `Aguarde ${remaining}s`;
+        }
+      }, 1000);
+    }
+
+    function isRecoveryRateLimitError(error) {
+      if (!error) return false;
+      const code = String(error.code || '').toLowerCase();
+      const status = Number(error.status || 0);
+      const message = String(error.message || '').toLowerCase();
+      return code === 'over_email_send_rate_limit' ||
+             status === 429 ||
+             message.includes('email rate limit') ||
+             message.includes('rate limit exceeded') ||
+             message.includes('too many requests') ||
+             message.includes('too many emails');
+    }
+
+    sendRecoveryBtn.addEventListener('click', async () => {
+      recoveryError.style.color = '#fca5a5';
+      recoveryError.textContent = '';
+      const email = recoveryEmail.value.trim();
+
+      if (!email) {
+        recoveryError.textContent = 'Informe o e-mail da conta.';
+        return;
+      }
+
+      if (sendRecoveryBtn.disabled) return;
+
+      sendRecoveryBtn.disabled = true;
+      sendRecoveryBtn.innerText = 'Enviando...';
+
+      try {
+        // O endereço atual é usado para que o link retorne ao AppCopy+.
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+
+        if (error) {
+          if (isRecoveryRateLimitError(error)) {
+            recoveryError.textContent = 'Limite de envio de e-mails atingido. Aguarde um pouco antes de solicitar outro link.';
+            startRecoveryCooldown(60);
+          } else {
+            recoveryError.textContent = error.message || 'Não foi possível enviar o link. Tente novamente mais tarde.';
+            sendRecoveryBtn.disabled = false;
+            sendRecoveryBtn.innerText = 'Enviar link';
+          }
+          return;
+        }
+
+        recoveryError.style.color = '#86efac';
+        recoveryError.textContent = 'Link enviado. Verifique seu e-mail e também a pasta de spam. Aguarde antes de solicitar outro link.';
+        startRecoveryCooldown(60);
+      } catch (error) {
+        if (isRecoveryRateLimitError(error)) {
+          recoveryError.textContent = 'Limite de envio de e-mails atingido. Aguarde um pouco antes de solicitar outro link.';
+          startRecoveryCooldown(60);
+        } else {
+          recoveryError.textContent = error?.message || 'Não foi possível enviar o link. Tente novamente mais tarde.';
+          sendRecoveryBtn.disabled = false;
+          sendRecoveryBtn.innerText = 'Enviar link';
+        }
+      }
+    });
+
+    updatePasswordBtn.addEventListener('click', async () => {
+      newPasswordError.style.color = '#fca5a5';
+      newPasswordError.textContent = '';
+      const password = newPassword.value;
+      const confirmPassword = newPasswordConfirm.value;
+
+      if (password.length < 6) {
+        newPasswordError.textContent = 'A nova senha precisa ter pelo menos 6 caracteres.';
+        return;
+      }
+      if (password !== confirmPassword) {
+        newPasswordError.textContent = 'As senhas não são iguais.';
+        return;
+      }
+
+      updatePasswordBtn.disabled = true;
+      updatePasswordBtn.innerText = 'Salvando...';
+
+      const { error } = await supabaseClient.auth.updateUser({ password });
+
+      updatePasswordBtn.disabled = false;
+      updatePasswordBtn.innerText = 'Salvar nova senha';
+
+      if (error) {
+        newPasswordError.textContent = error.message;
+        return;
+      }
+
+      newPassword.value = '';
+      newPasswordConfirm.value = '';
+      showToast('Senha alterada com sucesso!');
+      await startApp();
+    });
+
+    signupBtn.addEventListener('click', async () => {
+      authError.style.color = '#fca5a5';
+      authError.textContent = '';
+      const email = loginEmail.value.trim().toLowerCase();
+      const password = loginPassword.value;
+
+      if (!email || !password) {
+        authError.textContent = 'Informe o e-mail e a senha para criar a conta.';
+        return;
+      }
+      if (password.length < 6) {
+        authError.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+        return;
+      }
+
+      signupBtn.disabled = true;
+      signupBtn.innerText = 'Criando...';
+
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+
+      signupBtn.disabled = false;
+      signupBtn.innerText = 'Criar conta';
+
+      // Dependendo da configuração de confirmação de e-mail, o Supabase
+      // pode não retornar um erro para um e-mail já cadastrado. Nesse caso,
+      // identities vazio indica que a conta já existe.
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('user already exists')) {
+          authError.textContent = 'Este e-mail já está sendo usado. Use outro e-mail ou recupere a senha.';
+        } else {
+          authError.textContent = error.message;
+        }
+        return;
+      }
+
+      if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        authError.textContent = 'Este e-mail já está sendo usado. Use outro e-mail ou recupere a senha.';
+        return;
+      }
+
+      if (data.session) {
+        showToast('Conta criada com sucesso!');
+        await startApp();
+      } else {
+        authError.style.color = '#86efac';
+        authError.textContent = 'Conta criada. Verifique seu e-mail para confirmar a conta e depois entre.';
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      if (!confirm('Deseja sair da conta?')) return;
+      await supabaseClient.auth.signOut();
+      currentUserId = null;
+      notes = [];
+      authOverlay.classList.remove('hidden');
+      logoutBtn.style.display = 'none';
+      setSyncStatus('', 'Não conectado');
+      render();
+    });
+
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        if (session && session.user) {
+          currentUserId = session.user.id;
+          showNewPasswordMode();
+        }
+        return;
+      }
+
+      if (session && session.user) {
+        currentUserId = session.user.id;
+        authOverlay.classList.add('hidden');
+        logoutBtn.style.display = 'flex';
+      } else {
+        currentUserId = null;
+        notes = [];
+        showLoginMode();
+        authOverlay.classList.remove('hidden');
+        logoutBtn.style.display = 'none';
+        render();
+      }
+    });
+
+    // Utilitários de escape de strings
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function escapeQuotes(text) {
+      return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // Inicialização
+    showLoginMode();
+    startApp();
+  </script>
+</body>
+</html>
