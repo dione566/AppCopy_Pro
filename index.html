@@ -571,6 +571,7 @@
 
     .sync-status.online { color: #86efac; }
     .sync-status.error { color: #fca5a5; }
+    .sync-status.offline { color: #fbbf24; }
 
     .loading-msg {
       text-align: center;
@@ -887,28 +888,145 @@
       render();
     }
 
+    // ------------------------------------------------------------
+    // Armazenamento local + fila de sincronização
+    // ------------------------------------------------------------
+    const LOCAL_PREFIX = 'appcopy_pro_offline_v2_';
+
+    function localKey(userId) {
+      return LOCAL_PREFIX + String(userId);
+    }
+
+    function queueKey(userId) {
+      return LOCAL_PREFIX + 'queue_' + String(userId);
+    }
+
+    function loadLocalNotes(userId) {
+      try {
+        const raw = localStorage.getItem(localKey(userId));
+        return raw ? JSON.parse(raw).map(normalizeNote) : [];
+      } catch (e) {
+        console.error('Erro ao ler dados locais:', e);
+        return [];
+      }
+    }
+
+    function saveLocalNotes(userId, list) {
+      if (!userId) return;
+      localStorage.setItem(localKey(userId), JSON.stringify(list));
+    }
+
+    function loadQueue(userId) {
+      try {
+        const raw = localStorage.getItem(queueKey(userId));
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error('Erro ao ler fila offline:', e);
+        return [];
+      }
+    }
+
+    function saveQueue(userId, queue) {
+      if (!userId) return;
+      localStorage.setItem(queueKey(userId), JSON.stringify(queue));
+    }
+
+    function enqueue(op) {
+      if (!currentUserId) return;
+      const queue = loadQueue(currentUserId);
+
+      // Para o mesmo registro, compacta operações consecutivas:
+      // delete sempre vence; create + update vira create com os dados atuais.
+      const idx = queue.findIndex(x => String(x.id) === String(op.id));
+
+      if (idx >= 0) {
+        const old = queue[idx];
+
+        if (op.type === 'delete') {
+          queue[idx] = { type: 'delete', id: op.id, user_id: currentUserId };
+        } else if (old.type === 'create' && op.type === 'update') {
+          queue[idx] = { ...old, data: { ...old.data, ...op.data } };
+        } else if (old.type === 'update' && op.type === 'update') {
+          queue[idx] = { ...old, data: { ...old.data, ...op.data } };
+        } else {
+          queue[idx] = op;
+        }
+      } else {
+        queue.push(op);
+      }
+
+      saveQueue(currentUserId, queue);
+    }
+
+    function hasPendingChanges() {
+      return !!currentUserId && loadQueue(currentUserId).length > 0;
+    }
+
+    function isOnline() {
+      return navigator.onLine;
+    }
+
+    function setSyncStatus(type, text) {
+      syncStatus.className = 'sync-status' + (type ? ' ' + type : '');
+      syncStatus.innerHTML = '<i class="fas fa-cloud"></i> <span>' + escapeHtml(text) + '</span>';
+    }
+
+    function normalizeNote(note) {
+      return {
+        id: Number(note.id),
+        user_id: note.user_id || currentUserId,
+        title: note.title || '',
+        text: note.text || '',
+        favorite: Boolean(note.favorite),
+        folder: note.folder || 'Geral',
+        created_at: note.created_at,
+        updated_at: note.updated_at
+      };
+    }
+
+    function applyLocalNote(note) {
+      const normalized = normalizeNote(note);
+      const index = notes.findIndex(n => String(n.id) === String(normalized.id));
+      if (index >= 0) notes[index] = normalized;
+      else notes.unshift(normalized);
+      saveLocalNotes(currentUserId, notes);
+    }
+
+    function removeLocalNote(id) {
+      notes = notes.filter(n => String(n.id) !== String(id));
+      saveLocalNotes(currentUserId, notes);
+    }
+
     // Favoritar
     async function toggleFavorite(id) {
       if (!currentUserId) return;
-      const note = notes.find(n => n.id === id);
+      const note = notes.find(n => String(n.id) === String(id));
       if (!note) return;
 
-      const novoValor = !note.favorite;
-      const { error } = await supabaseClient
-        .schema('public').from('appcopy_notas')
-        .update({ favorite: novoValor, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+      note.favorite = !note.favorite;
+      note.updated_at = new Date().toISOString();
+      saveLocalNotes(currentUserId, notes);
+      render();
 
-      if (error) {
-        showToast('Erro ao salvar favorito: ' + error.message);
-        setSyncStatus('error', 'Erro');
+      if (!isOnline()) {
+        enqueue({
+          type: 'update',
+          id: note.id,
+          user_id: currentUserId,
+          data: { favorite: note.favorite, updated_at: note.updated_at }
+        });
+        setSyncStatus('offline', 'Offline • pendente');
+        showToast('Favorito salvo offline.');
         return;
       }
 
-      note.favorite = novoValor;
-      render();
-      setSyncStatus('online', 'Sincronizado');
+      enqueue({
+        type: 'update',
+        id: note.id,
+        user_id: currentUserId,
+        data: { favorite: note.favorite, updated_at: note.updated_at }
+      });
+      await syncPendingChanges();
     }
 
     // Excluir Nota
@@ -916,29 +1034,25 @@
       if (!currentUserId) return;
       if (!confirm("Deseja realmente excluir este item?")) return;
 
-      const { error } = await supabaseClient
-        .schema('public').from('appcopy_notas')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', currentUserId);
+      // Exclui primeiro localmente. O tombstone na fila impede que o item volte.
+      removeLocalNote(id);
+      enqueue({ type: 'delete', id, user_id: currentUserId });
+      render();
 
-      if (error) {
-        showToast('Erro ao excluir: ' + error.message);
-        setSyncStatus('error', 'Erro');
+      if (!isOnline()) {
+        setSyncStatus('offline', 'Offline • exclusão pendente');
+        showToast("Item excluído offline. Será sincronizado quando voltar a internet.");
         return;
       }
 
-      notes = notes.filter(n => n.id !== id);
-      render();
-      showToast("Item excluído!");
-      setSyncStatus('online', 'Sincronizado');
+      await syncPendingChanges();
     }
 
     // Copiar Texto
     function copyToClipboard(text) {
       navigator.clipboard.writeText(text).then(() => {
         showToast("Copiado para a área de transferência!");
-      });
+      }).catch(() => showToast("Não foi possível copiar."));
     }
 
     // Toast Notification
@@ -950,6 +1064,10 @@
 
     // Abrir Modal para Criar
     document.getElementById('open-modal-btn').addEventListener('click', () => {
+      if (!currentUserId) {
+        showToast('Entre na sua conta antes de salvar.');
+        return;
+      }
       editingNoteId = null;
       document.getElementById('modal-title').innerText = "Novo Registro";
       document.getElementById('new-note-title').value = '';
@@ -963,7 +1081,7 @@
 
     // Abrir Modal para Editar / Mover
     function openEditModal(id) {
-      const note = notes.find(n => n.id === id);
+      const note = notes.find(n => String(n.id) === String(id));
       if (!note) return;
 
       editingNoteId = id;
@@ -971,7 +1089,7 @@
       document.getElementById('new-note-title').value = note.title || '';
       document.getElementById('new-note-text').value = note.text;
       document.getElementById('new-note-folder').value = note.folder || 'Geral';
-      
+
       addModal.classList.add('active');
       document.getElementById('new-note-title').focus();
     }
@@ -980,12 +1098,13 @@
       addModal.classList.remove('active');
     }
 
-    // Salvar (Criar ou Editar) Nota
+    // Salvar (Criar ou Editar) — primeiro no aparelho, depois no Supabase
     async function handleSaveNote() {
       if (!currentUserId) {
         showToast('Entre na sua conta antes de salvar.');
         return;
       }
+
       const titleInput = document.getElementById('new-note-title');
       const textInput = document.getElementById('new-note-text');
       const folderInput = document.getElementById('new-note-folder');
@@ -1002,27 +1121,42 @@
       const saveButton = document.getElementById('modal-save-btn');
       saveButton.disabled = true;
       saveButton.innerText = 'Salvando...';
-      setSyncStatus('', 'Salvando...');
 
       try {
+        const now = new Date().toISOString();
+
         if (editingNoteId !== null) {
-          const { data, error } = await supabaseClient
-            .schema('public').from('appcopy_notas')
-            .update({
+          const note = notes.find(n => String(n.id) === String(editingNoteId));
+          if (!note) throw new Error('Registro não encontrado.');
+
+          note.title = titleVal;
+          note.text = textVal;
+          note.folder = folderVal;
+          note.updated_at = now;
+
+          saveLocalNotes(currentUserId, notes);
+          enqueue({
+            type: 'update',
+            id: note.id,
+            user_id: currentUserId,
+            data: {
               title: titleVal,
               text: textVal,
               folder: folderVal,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', editingNoteId)
-            .eq('user_id', currentUserId)
-            .select()
-            .single();
+              updated_at: now
+            }
+          });
 
-          if (error) throw error;
+          closeModal();
+          render();
 
-          notes = notes.map(n => n.id === editingNoteId ? normalizeNote(data) : n);
-          showToast("Registro atualizado!");
+          if (!isOnline()) {
+            setSyncStatus('offline', 'Offline • pendente');
+            showToast("Alteração salva offline.");
+          } else {
+            await syncPendingChanges();
+            showToast("Registro atualizado!");
+          }
         } else {
           const newNote = {
             id: Date.now(),
@@ -1030,28 +1164,34 @@
             title: titleVal,
             text: textVal,
             favorite: currentTab === 'FAVORITE',
-            folder: folderVal
+            folder: folderVal,
+            created_at: now,
+            updated_at: now
           };
 
-          const { data, error } = await supabaseClient
-            .schema('public').from('appcopy_notas')
-            .insert(newNote)
-            .select()
-            .single();
+          notes.unshift(newNote);
+          saveLocalNotes(currentUserId, notes);
+          enqueue({
+            type: 'create',
+            id: newNote.id,
+            user_id: currentUserId,
+            data: newNote
+          });
 
-          if (error) throw error;
+          closeModal();
+          render();
 
-          notes.unshift(normalizeNote(data));
-          showToast("Novo item adicionado!");
+          if (!isOnline()) {
+            setSyncStatus('offline', 'Offline • pendente');
+            showToast("Novo item salvo offline.");
+          } else {
+            await syncPendingChanges();
+            showToast("Novo item adicionado!");
+          }
         }
-
-        closeModal();
-        render();
-        setSyncStatus('online', 'Sincronizado');
       } catch (error) {
         console.error(error);
-        showToast('Erro ao salvar: ' + error.message);
-        setSyncStatus('error', 'Erro');
+        showToast('Erro ao salvar localmente: ' + error.message);
       } finally {
         saveButton.disabled = false;
         saveButton.innerText = 'Salvar';
@@ -1076,32 +1216,153 @@
     });
 
     // ------------------------------------------------------------
-    // Supabase: autenticação e sincronização
+    // Supabase: autenticação e sincronização online/offline
     // ------------------------------------------------------------
-    function setSyncStatus(type, text) {
-      syncStatus.className = 'sync-status' + (type ? ' ' + type : '');
-      syncStatus.innerHTML = '<i class="fas fa-cloud"></i> <span>' + escapeHtml(text) + '</span>';
-    }
 
-    function normalizeNote(note) {
-      return {
-        id: Number(note.id),
-        title: note.title || '',
-        text: note.text || '',
-        favorite: Boolean(note.favorite),
-        folder: note.folder || 'Geral',
-        created_at: note.created_at,
-        updated_at: note.updated_at
+    async function pushCreate(item) {
+      const payload = {
+        id: Number(item.id),
+        user_id: currentUserId,
+        title: item.title || '',
+        text: item.text || '',
+        favorite: Boolean(item.favorite),
+        folder: item.folder || 'Geral',
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || new Date().toISOString()
       };
+
+      const { data, error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .insert(payload)
+        .select()
+        .single();
+
+      // Se já existir, tenta transformar em atualização.
+      if (error && (error.code === '23505' || /duplicate|already exists/i.test(error.message || ''))) {
+        const { data: updated, error: updateError } = await supabaseClient
+          .schema('public').from('appcopy_notas')
+          .update({
+            title: payload.title,
+            text: payload.text,
+            favorite: payload.favorite,
+            folder: payload.folder,
+            updated_at: payload.updated_at
+          })
+          .eq('id', payload.id)
+          .eq('user_id', currentUserId)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        return updated;
+      }
+
+      if (error) throw error;
+      return data;
     }
 
-    async function loadNotesFromSupabase() {
-      if (!currentUserId) {
-        setSyncStatus('error', 'Usuário não autenticado');
-        return;
+    async function pushUpdate(item) {
+      const { data, error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .update(item.data || {})
+        .eq('id', item.id)
+        .eq('user_id', currentUserId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+
+      // Se a linha ainda não existe, isso pode ser uma criação local
+      // que foi compactada na fila. Cria o registro.
+      if (!data) {
+        const local = notes.find(n => String(n.id) === String(item.id));
+        if (!local) return null;
+
+        const created = await pushCreate({
+          ...local,
+          ...item.data,
+          id: item.id,
+          user_id: currentUserId
+        });
+        return created;
       }
-      setSyncStatus('', 'Carregando...');
-      noteListEl.innerHTML = '<div class="loading-msg"><i class="fas fa-spinner fa-spin"></i> Carregando suas anotações...</div>';
+
+      return data;
+    }
+
+    async function pushDelete(item) {
+      const { error } = await supabaseClient
+        .schema('public').from('appcopy_notas')
+        .delete()
+        .eq('id', item.id)
+        .eq('user_id', currentUserId);
+
+      if (error) throw error;
+    }
+
+    async function syncPendingChanges() {
+      if (!currentUserId || !isOnline()) {
+        if (currentUserId) setSyncStatus('offline', 'Offline');
+        return false;
+      }
+
+      let queue = loadQueue(currentUserId);
+      if (!queue.length) {
+        setSyncStatus('online', 'Sincronizado');
+        return true;
+      }
+
+      setSyncStatus('', 'Sincronizando...');
+
+      // Processa em ordem. Se uma operação falhar, fica na fila para a próxima tentativa.
+      while (queue.length && isOnline()) {
+        const item = queue[0];
+
+        try {
+          let result = null;
+
+          if (item.type === 'create') result = await pushCreate(item.data);
+          else if (item.type === 'update') result = await pushUpdate(item);
+          else if (item.type === 'delete') await pushDelete(item);
+
+          queue.shift();
+          saveQueue(currentUserId, queue);
+
+          // Atualiza a cópia local com o retorno do servidor, quando houver.
+          if (result) {
+            const normalized = normalizeNote(result);
+            const idx = notes.findIndex(n => String(n.id) === String(normalized.id));
+            if (idx >= 0) notes[idx] = normalized;
+            else notes.unshift(normalized);
+            saveLocalNotes(currentUserId, notes);
+          }
+        } catch (error) {
+          console.error('Falha na sincronização:', error);
+
+          // Falha de rede: mantém a fila e volta para modo offline.
+          if (!navigator.onLine || /network|fetch|failed to fetch|offline|timeout/i.test(error?.message || '')) {
+            setSyncStatus('offline', 'Offline • pendente');
+            return false;
+          }
+
+          setSyncStatus('error', 'Sincronização pendente');
+          showToast('Não foi possível sincronizar. Tentaremos novamente.');
+          return false;
+        }
+      }
+
+      if (!queue.length) {
+        setSyncStatus('online', 'Sincronizado');
+        render();
+        return true;
+      }
+
+      setSyncStatus('offline', 'Offline • pendente');
+      return false;
+    }
+
+    async function refreshFromSupabase() {
+      if (!currentUserId || !isOnline()) return false;
 
       const { data, error } = await supabaseClient
         .schema('public').from('appcopy_notas')
@@ -1111,63 +1372,123 @@
 
       if (error) {
         console.error('Erro Supabase:', error);
-        setSyncStatus('error', 'Erro');
-        noteListEl.innerHTML = '<div class="empty-msg">Não foi possível carregar as anotações.<br><small>' + escapeHtml(error.message) + '</small></div>';
-        showToast('Erro ao carregar o banco online.');
+        setSyncStatus('error', 'Erro online');
+        return false;
+      }
+
+      // Nunca substitui dados locais enquanto ainda houver operações pendentes.
+      if (hasPendingChanges()) return false;
+
+      notes = (data || []).map(normalizeNote);
+      saveLocalNotes(currentUserId, notes);
+
+      // Migração inicial dos exemplos apenas para uma conta realmente vazia.
+      if (notes.length === 0) {
+        const exemplos = JSON.parse(dataScript.textContent).map((n, i) => {
+          const now = new Date().toISOString();
+          return {
+            id: Date.now() + i,
+            user_id: currentUserId,
+            title: n.title || '',
+            text: n.text || '',
+            favorite: Boolean(n.favorite),
+            folder: n.folder || 'Geral',
+            created_at: now,
+            updated_at: now
+          };
+        });
+
+        try {
+          const { data: seeded, error: seedError } = await supabaseClient
+            .schema('public').from('appcopy_notas')
+            .insert(exemplos)
+            .select();
+
+          if (!seedError) {
+            notes = (seeded || exemplos).map(normalizeNote);
+            saveLocalNotes(currentUserId, notes);
+          } else {
+            console.error('Erro na migração inicial:', seedError);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      render();
+      setSyncStatus('online', 'Sincronizado');
+      return true;
+    }
+
+    async function loadNotesFromSupabase() {
+      if (!currentUserId) return;
+
+      // A tela usa imediatamente a última cópia local.
+      notes = loadLocalNotes(currentUserId);
+      render();
+
+      if (!isOnline()) {
+        setSyncStatus('offline', hasPendingChanges() ? 'Offline • pendente' : 'Offline');
         return;
       }
 
-      notes = (data || []).map(normalizeNote);
-
-      // Migração inicial: se a conta ainda não possui notas, preserva os exemplos
-      // que estavam no HTML, mas grava-os no Supabase apenas uma vez.
-      if (notes.length === 0) {
-        const exemplos = JSON.parse(dataScript.textContent).map((n, i) => ({
-          id: Date.now() + i,
-          user_id: currentUserId,
-          title: n.title || '',
-          text: n.text || '',
-          favorite: Boolean(n.favorite),
-          folder: n.folder || 'Geral'
-        }));
-
-        const { data: seeded, error: seedError } = await supabaseClient
-          .schema('public').from('appcopy_notas')
-          .insert(exemplos)
-          .select();
-
-        if (seedError) {
-          console.error('Erro na migração inicial:', seedError);
-          setSyncStatus('error', 'Erro');
-          noteListEl.innerHTML = '<div class="empty-msg">Banco conectado, mas não foi possível gravar os dados iniciais.<br><small>' + escapeHtml(seedError.message) + '</small></div>';
-          return;
-        }
-
-        notes = (seeded || exemplos).map(normalizeNote);
-        showToast('Dados iniciais enviados ao Supabase!');
+      // Primeiro envia inclusões/edições/exclusões feitas offline.
+      const synced = await syncPendingChanges();
+      if (synced !== false && isOnline()) {
+        await refreshFromSupabase();
       }
-
-      setSyncStatus('online', 'Sincronizado');
-      render();
     }
 
     async function startApp() {
+      // getSession usa a sessão persistida pelo Supabase. Se a página abrir offline,
+      // a sessão local pode continuar disponível no aparelho.
       const { data: { session } } = await supabaseClient.auth.getSession();
 
       if (session && session.user) {
         currentUserId = session.user.id;
         authOverlay.classList.add('hidden');
         logoutBtn.style.display = 'flex';
+
         await loadNotesFromSupabase();
       } else {
         currentUserId = null;
         notes = [];
         authOverlay.classList.remove('hidden');
         logoutBtn.style.display = 'none';
-        setSyncStatus('', 'Não conectado');
+        setSyncStatus('', isOnline() ? 'Não conectado' : 'Offline');
         render();
       }
     }
+
+    // Quando a internet volta, envia automaticamente tudo que ficou pendente.
+    let reconnectTimer = null;
+
+    window.addEventListener('offline', () => {
+      if (currentUserId) {
+        setSyncStatus('offline', hasPendingChanges() ? 'Offline • pendente' : 'Offline');
+        showToast('Você está offline. As alterações serão salvas neste aparelho.');
+      }
+    });
+
+    window.addEventListener('online', () => {
+      if (!currentUserId) return;
+
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(async () => {
+        setSyncStatus('', 'Reconectando...');
+        const ok = await syncPendingChanges();
+        if (ok) await refreshFromSupabase();
+        else setSyncStatus('offline', 'Sincronização pendente');
+      }, 700);
+    });
+
+    // Sincronização periódica enquanto a página estiver aberta.
+    setInterval(async () => {
+      if (currentUserId && isOnline() && hasPendingChanges()) {
+        await syncPendingChanges();
+        if (!hasPendingChanges()) await refreshFromSupabase();
+      }
+    }, 15000);
 
     function showLoginMode() {
       loginForm.classList.remove('recovery-active');
